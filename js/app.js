@@ -84,13 +84,13 @@ var GAME = {
     plane = new Plane({
       x: 320,
       y: 470,
-      src: "../img/plane.png"
+      src: "https://i.loli.net/2018/05/30/5b0e8abd0d930.png"
     });
     //产生怪兽
     for (let i = 0; i < 7; i++) {
       let offsetX = 30 + i * 60;
       let offsetY = 30;
-      let src = "../img/enemy.png";
+      let src = "https://i.loli.net/2018/05/30/5b0e8abd0c41e.png";
       let direction = "right";
       monsters.push(
         new Monster({
@@ -178,7 +178,7 @@ class Monster {
     }
   }
   godie() {
-    this.src = "../img/boom.png";
+    this.src = "https://i.loli.net/2018/05/30/5b0e8abcdb1cb.png";
     if (this.count < 10) {
       this.count += 1;
       return;

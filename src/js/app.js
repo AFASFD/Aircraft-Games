@@ -14,9 +14,9 @@ window.requestAnimFrame =
     window.setTimeout(callback, 1000 / 20);
   };
 //存放所有怪兽
-let monsters = [];
+let monsters;
 //存放所有子弹
-let bullets = [];
+let bullets;
 //飞机
 let plane;
 /**
@@ -28,6 +28,7 @@ var GAME = {
    * @param  {object} opts
    * @return {[type]}      [description]
    */
+  score: 0,
   init: function(opts) {
     this.status = "start";
     this.bindEvent();
@@ -39,6 +40,13 @@ var GAME = {
     playBtn.onclick = function() {
       self.play();
     };
+    var replayBtns = document.querySelectorAll(".js-replay");
+    replayBtns.forEach(replayBtn => {
+      replayBtn.onclick = function() {
+        console.log("重新开始");
+        self.play();
+      };
+    });
   },
 
   /**
@@ -53,14 +61,22 @@ var GAME = {
   setStatus: function(status) {
     this.status = status;
     container.setAttribute("data-status", status);
-    if (status === "success") {
-      console.log(2);
-      context.clearRect(0, 0, canvas.width, canvas.height);
+    context.clearRect(0, 0, canvas.width, canvas.height);
+    if (status === "all-success") {
+      document.querySelector(".game-all-success > .all-score").textContent =
+        "最终得分:" + this.score;
       eventHub.emit("over");
-      console.log(3);
+    } else if (status === "failed") {
+      document.querySelector(".game-failed > .game-info-text").textContent =
+        "最终得分:" + this.score;
+      eventHub.emit("over");
     }
   },
   play: function() {
+    monsters = [];
+    bullets = [];
+    eventHub.events = {};
+    this.score = 0;
     this.setStatus("playing");
     //监听怪兽触碰左右边缘
     this.bindEventHub();
@@ -81,6 +97,7 @@ var GAME = {
           x: offsetX,
           y: offsetY,
           src: src,
+          die: false,
           direction: direction
         })
       );
@@ -89,6 +106,8 @@ var GAME = {
     for (let i = 0; i < monsters.length; i++) {
       monsters[i].draw();
     }
+    //显示成绩
+    this.drawScore();
     animate();
   },
   bindEventHub: function() {
@@ -107,6 +126,12 @@ var GAME = {
         monster.y += 50;
       });
     });
+  },
+  drawScore: function() {
+    context.fillStyle = "white";
+    context.font = "20px serif";
+    context.textBaseline = "hanging";
+    context.fillText(`分数:${this.score}`, 10, 15);
   }
 };
 //怪兽
@@ -116,24 +141,9 @@ class Monster {
     this.y = opts.y;
     this.src = opts.src;
     this.direction = opts.direction;
-    //检测子弹碰撞
-    this.timer = setInterval(() => {
-      for (let i = 0; i < monsters.length; i++) {
-        for (let j = 0; j < bullets.length; j++) {
-          if (
-            monsters[i].y + 50 > bullets[j].y &&
-            monsters[i].x < bullets[j].x &&
-            monsters[i].x + 50 > bullets[j].x
-          ) {
-            eventHub.on("over", () => {
-              clearInterval(this.timer);
-            });
-            monsters[i].draw(i);
-            break;
-          }
-        }
-      }
-    }, 16);
+    this.die = opts.die;
+    this.count = 0;
+    this.boomed = false;
   }
   //怪兽移动
   move() {
@@ -141,29 +151,39 @@ class Monster {
       if (this.x <= 620) {
         this.x += 1;
       } else {
-        eventHub.emit("down");
         eventHub.emit("left");
+        eventHub.emit("down");
       }
     } else {
       if (this.x >= 30) {
         this.x -= 1;
       } else {
-        eventHub.emit("down");
         eventHub.emit("right");
+        eventHub.emit("down");
       }
     }
   }
   //绘制怪兽
-  draw(index) {
+  draw() {
     //如果传值说明是爆炸
-    if (index || index === 0) {
-      monsters[index].src = "../img/boom.png";
-      monsters.splice(index, 1);                       //111111111111111111111111111111111111
+    if (this.boomed) {
+      this.godie();
+      let img = new Image();
+      img.src = this.src;
+      context.drawImage(img, this.x, this.y, 50, 50);
     } else {
       let img = new Image();
       img.src = this.src;
       context.drawImage(img, this.x, this.y, 50, 50);
     }
+  }
+  godie() {
+    this.src = "../img/boom.png";
+    if (this.count < 10) {
+      this.count += 1;
+      return;
+    }
+    this.die = true;
   }
 }
 //飞机
@@ -242,6 +262,7 @@ class Bullet {
     this.x = opts.x;
     this.y = opts.y;
     this.direction = opts.direction;
+    this.die = false;
   }
   //绘制子弹
   draw() {
@@ -254,12 +275,37 @@ class Bullet {
       this.y -= 10;
     }
   }
+  boom() {
+    this.die = true;
+  }
 }
 // 游戏初始化
 GAME.init();
 
 //怪兽移动帧动画
 function animate() {
+  //检测子弹与怪兽碰撞
+  for (let i = 0; i < monsters.length; i++) {
+    for (let j = 0; j < bullets.length; j++) {
+      if (
+        monsters[i].y < bullets[j].y &&
+        monsters[i].y + 50 > bullets[j].y &&
+        monsters[i].x < bullets[j].x &&
+        monsters[i].x + 50 > bullets[j].x
+      ) {
+        monsters[i].boomed = true;
+        bullets.splice(j, 1);
+        break;
+      }
+    }
+  }
+  for (let i = 0; i < monsters.length; i++) {
+    if (monsters[i].y > 470) {
+      GAME.setStatus("failed");
+      console.log(123);
+      return;
+    }
+  }
   //所有怪兽移动
   for (let i = 0; i < monsters.length; i++) {
     monsters[i].move();
@@ -277,11 +323,16 @@ function animate() {
   context.clearRect(0, 0, canvas.width, canvas.height);
   //怪兽死完游戏成功
   if (monsters.length === 0) {
-    GAME.setStatus("success");
+    GAME.setStatus("all-success");
     return;
   }
   // 绘画所有怪兽
   for (let i = 0; i < monsters.length; i++) {
+    if (monsters[i].die === true) {
+      monsters.splice(i, 1);
+      GAME.score += 1;
+      continue;
+    }
     monsters[i].draw();
   }
   // 绘画所有子弹
@@ -291,6 +342,7 @@ function animate() {
   // 绘画飞机
   plane.draw();
 
+  GAME.drawScore();
   // 使用requestAnimationFrame实现动画循环
   requestAnimationFrame(animate);
 }

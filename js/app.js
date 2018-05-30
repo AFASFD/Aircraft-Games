@@ -10,7 +10,7 @@ window.requestAnimFrame =
   window.mozRequestAnimationFrame ||
   window.oRequestAnimationFrame ||
   window.msRequestAnimationFrame ||
-  function(callback) {
+  function (callback) {
     window.setTimeout(callback, 1000 / 20);
   };
 //存放所有怪兽
@@ -29,21 +29,20 @@ var GAME = {
    * @return {[type]}      [description]
    */
   score: 0,
-  init: function(opts) {
+  init: function (opts) {
     this.status = "start";
     this.bindEvent();
   },
-  bindEvent: function() {
+  bindEvent: function () {
     var self = this;
     var playBtn = document.querySelector(".js-play");
     // 开始游戏按钮绑定
-    playBtn.onclick = function() {
+    playBtn.onclick = function () {
       self.play();
     };
     var replayBtns = document.querySelectorAll(".js-replay");
     replayBtns.forEach(replayBtn => {
-      replayBtn.onclick = function() {
-        console.log("重新开始");
+      replayBtn.onclick = function () {
         self.play();
       };
     });
@@ -58,7 +57,7 @@ var GAME = {
    * all-success 游戏通过
    * stop 游戏暂停（可选）
    */
-  setStatus: function(status) {
+  setStatus: function (status) {
     this.status = status;
     container.setAttribute("data-status", status);
     context.clearRect(0, 0, canvas.width, canvas.height);
@@ -72,7 +71,7 @@ var GAME = {
       eventHub.emit("over");
     }
   },
-  play: function() {
+  play: function () {
     monsters = [];
     bullets = [];
     eventHub.events = {};
@@ -110,7 +109,7 @@ var GAME = {
     this.drawScore();
     animate();
   },
-  bindEventHub: function() {
+  bindEventHub: function () {
     eventHub.on("left", () => {
       monsters.forEach(monster => {
         monster.direction = "left";
@@ -127,7 +126,7 @@ var GAME = {
       });
     });
   },
-  drawScore: function() {
+  drawScore: function () {
     context.fillStyle = "white";
     context.font = "20px serif";
     context.textBaseline = "hanging";
@@ -201,14 +200,12 @@ class Plane {
         clearInterval(this.timer);
       });
       if (this.direction === "left" && this.x >= 30) {
-        if (this.move) {
+        if (this.leftMove) {
           this.x -= 5;
-          this.draw();
         }
       } else if (this.direction === "right" && this.x <= 610) {
-        if (this.move) {
+        if (this.rightMove) {
           this.x += 5;
-          this.draw();
         }
       }
     }, 16);
@@ -227,23 +224,52 @@ class Plane {
       switch (key) {
         // 点击左方向键
         case 37:
-          this.move = true;
+          this.leftMove = true;
           this.direction = "left";
           break;
-        // 点击右方向键
+          // 点击右方向键
         case 39:
-          this.move = true;
+          this.rightMove = true;
           this.direction = "right";
           break;
-        // 点击空格
+          // 点击空格
         case 32:
           this.makeBullet();
           break;
       }
     };
-    document.onkeyup = () => {
-      this.move = false;
+    document.onkeypress = e => {
+      var key = e.keyCode || e.which || e.charCode;
+      switch (key) {
+        // 点击左方向键
+        case 37:
+          this.leftMove = true;
+          this.direction = "left";
+          break;
+          // 点击右方向键
+        case 39:
+          this.rightMove = true;
+          this.direction = "right";
+          break;
+          // 点击空格
+        case 32:
+          this.makeBullet();
+          break;
+      }
     };
+    document.onkeyup = (e) => {
+      var key = e.keyCode || e.which || e.charCode;
+      switch (key) {
+        // 松开左方向键
+        case 37:
+          this.leftMove = false;
+          break;
+          // 松开右方向键
+        case 39:
+          this.rightMove = false;
+          break;
+      }
+    }
   }
   //发射子弹
   makeBullet() {
